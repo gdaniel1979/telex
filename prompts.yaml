@@ -1,0 +1,76 @@
+# A | jel YAML-ban azt jelenti, hogy több soros szöveg következik, és a sortöréseket megtartja.
+
+kulfold:
+  batch_prompt: |
+    Az alábbi híreket ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hét cikkeinek a címét és bevezetőjét olvasd el, és adj összefoglalást a cikkekről.
+    Az összefoglalás szerkezete az alábbi módon nézzen ki:
+    - Cikkek dátuma, maradjon meg a YYYY-MM-DD formátum
+    - Tárgyalt ország: pl. USA.
+    - Mi a fő témája az adott cikknek tömör összefoglalásban.
+
+  final_prompt: |
+    Itt vannak az előzetes részösszefoglalók különböző hírekből, amelyeknek a szerkezete:
+    Dátum
+    Tárgyalt ország: pl. USA.
+    Mi a fő témája az adott cikknek tömör összefoglalásban.
+    Ezek alapján készíts egy átfogó elemzést:
+    Mely témák domináltak összességében, mely országokról szóltak a hírek, és van-e ismétlődő vagy közös narratíva.
+    Ezt az összefoglaló részt fő témánként csoportosítva írd meg, a témák között sortörést alkalmazz, és minden egyes fő témáról írj 5-5 mondatot.
+    Ezekben a fő témákban általánosságban milyen hangvételű cikkek születtek? Negatív? Pozitív? Semleges?
+    Írd meg az összefoglaló elején, hogy mely időintervallumról szólnak a cikkek, a YYYY-MM-DD formátumú dátumok alapján. 
+    A hírek ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hétről szólnak.
+    A cél, hogy a felhasználó, akihez nem jutottak el a hírek az elmúlt időszakból, átfogó és részletes képet kapjon a történésekről.
+    Ezen kívül számold meg, hogy hány cikk készült az egyes országokról, és ezt a listát tedd csökkenő sorrendbe az alábbi struktúrában:
+    Ország: darabszám
+    Ország: darabszám
+    ...
+    Az országok felsorolásában maximum 10 db országot sorolj fel (ha esetleg ennél több ország jelenne meg a cikkek között)
+    Ezen kívül számold meg, hogy hány cikk készült az egyes fő témákról, és ezt a listát tedd csökkenő sorrendbe az alábbi struktúrában:
+    Fő téma: darabszám
+    Fő téma: darabszám
+    ...
+        
+belfold:
+  batch_prompt: |
+    Az alábbi híreket ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hét cikkeinek a címét és bevezetőjét olvasd el, és adj összefoglalást a cikkekről.
+    Az összefoglalás szerkezete:
+    - Cikkek dátuma, maradjon meg a YYYY-MM-DD formátum
+    - Fő téma röviden
+    - Fontos szereplők
+    - Főbb események
+
+  final_prompt: |
+    Itt vannak a belföldi hírek előzetes összefoglalói.
+    Készíts átfogó elemzést: fő témák, kulcsesemények, ismétlődő narratívák.
+    Ezt az összefoglaló részt fő témánként csoportosítva írd meg, a témák között sortörést alkalmazz, és minden egyes fő témáról írj 5-5 mondatot.
+    Ezekben a fő témákban általánosságban milyen hangvételű cikkek születtek? Negatív? Pozitív? Semleges?
+    Írd meg az összefoglaló elején, hogy mely időintervallumról szólnak a cikkek, a YYYY-MM-DD formátumú dátumok alapján.
+    A hírek ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hétről szólnak.
+    A cél, hogy a felhasználó, akihez nem jutottak el a hírek az elmúlt időszakból, átfogó és részletes képet kapjon a történésekről.
+    Ezen kívül számold meg, hogy hány cikk készült az egyes fő témákról, és ezt a listát tedd csökkenő sorrendbe az alábbi struktúrában:
+    Fő téma: darabszám
+    Fő téma: darabszám
+    ...
+    
+gazdasag:
+  batch_prompt: |
+    Az alábbi híreket ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hét cikkeinek a címét és bevezetőjét olvasd el, és adj összefoglalást a cikkekről.
+    Az összefoglalás tartalmazza:
+    - Cikkek dátuma, maradjon meg a YYYY-MM-DD formátum
+    - Fő gazdasági esemény
+    - Érintett szektor(ok)
+    - Rövid leírás
+
+  final_prompt: |
+    Itt vannak a gazdasági hírek részösszefoglalói.
+    Készíts átfogó elemzést a domináns gazdasági trendekről, szektorokról, hatásokról.
+    Ezt az összefoglaló részt fő témánként csoportosítva írd meg, a témák között sortörést alkalmazz, és minden egyes fő témáról írj 5-5 mondatot.
+    Ezekben a fő témákban általánosságban milyen hangvételű cikkek születtek? Negatív? Pozitív? Semleges?
+    Írd meg az összefoglaló elején, hogy mely időintervallumról szólnak a cikkek, a YYYY-MM-DD formátumú dátumok alapján.
+    A hírek ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hétről szólnak.
+    A cél, hogy a felhasználó, akihez nem jutottak el a hírek az elmúlt időszakból, átfogó és részletes képet kapjon a történésekről.
+    Ezen kívül számold meg, hogy hány cikk készült az egyes fő témákról, és ezt a listát tedd csökkenő sorrendbe az alábbi struktúrában:
+    Fő téma: darabszám
+    Fő téma: darabszám
+    ...
+    
