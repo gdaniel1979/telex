@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 # =======================================================================================
 #              SCRAPING ARTICLES
 # =======================================================================================
@@ -11,6 +5,7 @@
 import requests
 import pandas as pd
 from datetime import date, datetime, timedelta
+import time
 
 # ------ Web scraping ------
 from bs4 import BeautifulSoup
@@ -18,6 +13,9 @@ import re
 
 pd.set_option('display.max_colwidth', None)
 pd.set_option('display.max_rows', 200)
+
+# --- Start timer (for LOG file) ---
+script_start = time.time()
 
 weeks_back = 1  # Collects articles from the past week
 today = date.today()
@@ -120,7 +118,7 @@ def scrape_topic(rovat_label, rovat_url, cutoff_date):
         page += 1
 
     # At the end of the loop:
-    print(f"✅ {len(articles)} articles collected in the topic '{rovat_label}'. ({date.today()})\n\n")
+    print(f"✅ {len(articles)} articles collected in the topic '{rovat_label}'. ({date.today()})")
     return pd.DataFrame(articles)
 # -------------------------------------------------------------------
 
@@ -165,8 +163,13 @@ print("SENDING TO OPENAI")
 with open("/home/gdaniel1979/hobby_projects/Telex/prompts.yaml", "r", encoding="utf-8") as f:
     prompts = yaml.safe_load(f)
 
+# --- Global counters ---
+total_prompt_tokens = 0
+total_completion_tokens = 0
+
 # --- Function for processing a given topic ---
 def analyze_dataframe(df, rovat_label, rovat_url):
+    global total_prompt_tokens, total_completion_tokens
     
     articles = df.to_dict(orient="records") # "articles" defined in the section "SCRAPING ARTICLES"
 
@@ -199,7 +202,7 @@ def analyze_dataframe(df, rovat_label, rovat_url):
     # Articles from batches will be saved into this list
     summaries = []
 
-    print(f"\n📂 {rovat_label.upper()} — There are {len(batches)} batches")
+    print(f"📂 {rovat_label.upper()} — {len(batches)} batches")
 
     for i, batch in enumerate(batches, start=1):
         # Deleting and rewriting a row
@@ -219,10 +222,12 @@ def analyze_dataframe(df, rovat_label, rovat_url):
             temperature=gpt_temperature
         )
 
+        # --- Token statistics ---
+        usage = response.usage
+        total_prompt_tokens += usage.prompt_tokens
+        total_completion_tokens += usage.completion_tokens
+        
         summaries.append(response.choices[0].message.content.strip())
-
-    # At the end, a new line is necessary so that the next entry does not go on the same line.
-    print()
 
     # Calling final summary, whose prompt is written in an external file.
     final_prompt = final_prompt_template + "\n\n".join(summaries)
@@ -234,9 +239,15 @@ def analyze_dataframe(df, rovat_label, rovat_url):
         temperature=gpt_temperature
     )
 
+    usage = final_response.usage
+    total_prompt_tokens += usage.prompt_tokens
+    total_completion_tokens += usage.completion_tokens
+    
     final_summary = final_response.choices[0].message.content.strip()
 
     return summaries, final_summary
+
+print()
 
 # --- Processing all three topics ---
 summaries_kulfold, final_kulfold = analyze_dataframe(scrapelt_cikkek["külföld"], "külföld", "kulfold")
@@ -246,6 +257,7 @@ summaries_gazdasag, final_gazdasag = analyze_dataframe(scrapelt_cikkek["gazdasá
 # print("\n📊 KÜLFÖLD summary:\n", final_kulfold)
 # print("\n📊 BELFÖLD summary:\n", final_belfold)
 # print("\n📊 GAZDASÁG summary:\n", final_gazdasag)
+
 
 # =======================================================================================
 #               WORLDCLOUD
@@ -446,7 +458,6 @@ def create_message_with_image(to, subject, body_text, image_path):
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     return {'raw': raw}
 
-
 def send_email(service, message):
     sent = service.users().messages().send(userId="me", body=message).execute()
     return sent
@@ -465,3 +476,37 @@ def main():
 if __name__ == "__main__":
     main()
 
+# --- Script end time (for LOG file) ---
+script_end = time.time()
+
+# --- Duration (for LOG file) ---
+duration = script_end - script_start
+
+# --- Model prices ---
+MODEL_PRICES = {
+    "gpt-4o-mini": {"prompt": 0.00000015, "completion": 0.00000060},
+    "gpt-4o": {"prompt": 0.000005, "completion": 0.000015},
+    "gpt-4.1": {"prompt": 0.000005, "completion": 0.000015},
+    "gpt-3.5-turbo": {"prompt": 0.0000015, "completion": 0.000002}
+}
+
+# --- Calculating token costs ---
+total_tokens = total_prompt_tokens + total_completion_tokens
+total_cost_usd = (
+    total_prompt_tokens * MODEL_PRICES[gpt_model]["prompt"] +
+    total_completion_tokens * MODEL_PRICES[gpt_model]["completion"]
+)
+
+# --- Log summary ---
+log_summary = f"""
+--- RUN SUMMARY ---
+Script start: {time.strftime('%H:%M:%S', time.localtime(script_start))}
+Script end  : {time.strftime('%H:%M:%S', time.localtime(script_end))}
+Duration    : {time.strftime('%H:%M:%S', time.localtime(duration))}
+Total tokens used: {total_tokens} (prompt: {total_prompt_tokens}, completion: {total_completion_tokens})
+Estimated cost (USD): ${total_cost_usd:.5f}
+-------------------
+"""
+
+# --- Print to console (in bash $OUTPUT) ---
+print(log_summary)
