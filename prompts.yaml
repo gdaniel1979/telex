@@ -20,6 +20,9 @@ kulfold:
     Írd meg az összefoglaló elején, hogy mely időintervallumról szólnak a cikkek, a YYYY-MM-DD formátumú dátumok alapján. 
     A hírek ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hétről szólnak.
     A cél, hogy a felhasználó, akihez nem jutottak el a hírek az elmúlt időszakból, átfogó és részletes képet kapjon a történésekről.
+    Az összefoglalást NE markdown formátumban írd meg. Olyan formátuma legyen, amit e-mailben kényelmes olvasni.
+    Az összefoglalás elkészítése előtt, közben és utána ne adj tanácsokat abban, hogy milyen módon lehet a kimenetet fejleszteni, kommentárt és kérdéseket se fűzz hozzá.
+    Csak a tiszta összefoglalásra van szükségem.
     Ezen kívül számold meg, hogy hány cikk készült az egyes országokról, és ezt a listát tedd csökkenő sorrendbe az alábbi struktúrában:
     Ország: darabszám
     Ország: darabszám
@@ -47,6 +50,9 @@ belfold:
     Írd meg az összefoglaló elején, hogy mely időintervallumról szólnak a cikkek, a YYYY-MM-DD formátumú dátumok alapján.
     A hírek ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hétről szólnak.
     A cél, hogy a felhasználó, akihez nem jutottak el a hírek az elmúlt időszakból, átfogó és részletes képet kapjon a történésekről.
+    Az összefoglalást NE markdown formátumban írd meg. Olyan formátuma legyen, amit e-mailben kényelmes olvasni.
+    Az összefoglalás elkészítése előtt, közben és utána ne adj tanácsokat abban, hogy milyen módon lehet a kimenetet fejleszteni, kommentárt és kérdéseket se fűzz hozzá.
+    Csak a tiszta összefoglalásra van szükségem.
     Ezen kívül számold meg, hogy hány cikk készült az egyes fő témákról, és ezt a listát tedd csökkenő sorrendbe az alábbi struktúrában:
     Fő téma: darabszám
     Fő téma: darabszám
@@ -69,6 +75,9 @@ gazdasag:
     Írd meg az összefoglaló elején, hogy mely időintervallumról szólnak a cikkek, a YYYY-MM-DD formátumú dátumok alapján.
     A hírek ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hétről szólnak.
     A cél, hogy a felhasználó, akihez nem jutottak el a hírek az elmúlt időszakból, átfogó és részletes képet kapjon a történésekről.
+    Az összefoglalást NE markdown formátumban írd meg. Olyan formátuma legyen, amit e-mailben kényelmes olvasni.
+    Az összefoglalás elkészítése előtt, közben és utána ne adj tanácsokat abban, hogy milyen módon lehet a kimenetet fejleszteni, kommentárt és kérdéseket se fűzz hozzá.
+    Csak a tiszta összefoglalásra van szükségem.
     Ezen kívül számold meg, hogy hány cikk készült az egyes fő témákról, és ezt a listát tedd csökkenő sorrendbe az alábbi struktúrában:
     Fő téma: darabszám
     Fő téma: darabszám
