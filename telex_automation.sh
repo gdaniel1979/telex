@@ -40,6 +40,7 @@ for topic in kulfold belfold gazdasag; do
     FILE="$BASE_DIR/wordcloud_${topic}_$(date +%Y-%m-%d).png"
     if [ -f "$FILE" ]; then
         mv "$FILE" "$ARCHIVE_DIR/"
-        echo "$FILE archived"
     fi
 done
+
+echo "Done"
