@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
 # =======================================================================================
 #              SCRAPING ARTICLES
 # =======================================================================================
@@ -25,10 +31,10 @@ gpt_model = "gpt-4o-mini"
 gpt_temperature = 0.7
 
 # ---------------------------
-print("\n=== GPT SETTINGS ===")
+print("\nGPT SETTINGS")
 print(f"Model: {gpt_model}")
 print(f"Temperature: {gpt_temperature}")
-print("====================\n")
+print()
 print("COLLECTING ARTICLES")
 
 # ------ Function for scraping articles ------
@@ -119,6 +125,7 @@ def scrape_topic(rovat_label, rovat_url, cutoff_date):
 
     # At the end of the loop:
     print(f"✅ {len(articles)} articles collected in the topic '{rovat_label}'. ({date.today()})")
+
     return pd.DataFrame(articles)
 # -------------------------------------------------------------------
 
@@ -157,7 +164,7 @@ client = OpenAI(api_key=api_key)
 batch_size = 5
 today_str = date.today().strftime("%Y-%m-%d") # Preparing date, which will be used in prompts.yaml
 
-print("SENDING TO OPENAI")
+print("\nSENDING TO OPENAI")
 
 # --- Loading prompts from external file ---
 with open("/home/gdaniel1979/hobby_projects/Telex/prompts.yaml", "r", encoding="utf-8") as f:
@@ -247,12 +254,12 @@ def analyze_dataframe(df, rovat_label, rovat_url):
 
     return summaries, final_summary
 
-print()
-
 # --- Processing all three topics ---
 summaries_kulfold, final_kulfold = analyze_dataframe(scrapelt_cikkek["külföld"], "külföld", "kulfold")
 summaries_belfold, final_belfold = analyze_dataframe(scrapelt_cikkek["belföld"], "belföld", "belfold")
 summaries_gazdasag, final_gazdasag = analyze_dataframe(scrapelt_cikkek["gazdaság"], "gazdaság", "gazdasag")
+
+print()
 
 # print("\n📊 KÜLFÖLD summary:\n", final_kulfold)
 # print("\n📊 BELFÖLD summary:\n", final_belfold)
@@ -334,7 +341,7 @@ plt.show()
 
 import os
 import base64
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -476,12 +483,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-# --- Script end time (for LOG file) ---
-script_end = time.time()
-
-# --- Duration (for LOG file) ---
-duration = script_end - script_start
-
 # --- Model prices ---
 MODEL_PRICES = {
     "gpt-4o-mini": {"prompt": 0.00000015, "completion": 0.00000060},
@@ -497,16 +498,28 @@ total_cost_usd = (
     total_completion_tokens * MODEL_PRICES[gpt_model]["completion"]
 )
 
+# --- Script end time (for LOG file) ---
+script_end = time.time()
+
+# --- Duration (for LOG file) ---
+duration = int(script_end - script_start)
+
+# --- Converting duration into HH:MM:SS format ---
+hours, remainder = divmod(duration, 3600)
+minutes, seconds = divmod(remainder, 60)
+duration_str = f"{hours:02}:{minutes:02}:{seconds:02}"
+
 # --- Log summary ---
 log_summary = f"""
---- RUN SUMMARY ---
+RUN SUMMARY
 Script start: {time.strftime('%H:%M:%S', time.localtime(script_start))}
 Script end  : {time.strftime('%H:%M:%S', time.localtime(script_end))}
-Duration    : {time.strftime('%H:%M:%S', time.localtime(duration))}
+Duration    : {duration_str}
 Total tokens used: {total_tokens} (prompt: {total_prompt_tokens}, completion: {total_completion_tokens})
 Estimated cost (USD): ${total_cost_usd:.5f}
--------------------
+-----------------------------------------------------------------------
 """
 
 # --- Print to console (in bash $OUTPUT) ---
 print(log_summary)
+
