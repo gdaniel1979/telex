@@ -12,7 +12,7 @@ The workflow is automated with a **Bash script** and can be scheduled with `cron
   - 🌍 Külföld (Foreign)
   - 💰 Gazdaság (Economy)
 - **AI-based text analysis**: Uses OpenAI GPT models (`gpt-4o-mini` by default) to summarize batches of articles and produce final summaries.
-- **Batch Processing:** Handles article batches to respect token limits, then produces a final comprehensive summary.  
+- **Batch Processing:** Handles article batches to respect token limits.  
 - **WordCloud visualization**: Generates word cloud images from summaries for each topic.
 - **Automated email reports**: Sends formatted summaries with embedded word clouds via Gmail API.
 - **Cost tracking**: Logs OpenAI token usage and estimated USD cost per run.
