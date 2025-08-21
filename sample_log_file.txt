@@ -1,0 +1,27 @@
+===== 2025-08-21 11:30:02 =====
+
+GPT SETTINGS
+Model: gpt-4o-mini
+Temperature: 0.7
+
+COLLECTING ARTICLES
+✅ 115 articles collected in the topic 'külföld'. (2025-08-21)
+✅ 148 articles collected in the topic 'belföld'. (2025-08-21)
+✅ 44 articles collected in the topic 'gazdaság'. (2025-08-21)
+
+SENDING TO OPENAI
+📂 KÜLFÖLD — 23 batches
+📂 BELFÖLD — 30 batches
+📂 GAZDASÁG — 9 batches
+
+E-mail sent (KÜLFÖLD), 2025-08-21 11:41:49
+E-mail sent (BELFÖLD), 2025-08-21 11:41:50
+E-mail sent (GAZDASÁG), 2025-08-21 11:41:51
+
+RUN SUMMARY
+Script start: 11:30:06
+Script end  : 11:41:51
+Duration    : 00:11:44
+Total tokens used: 100258 (prompt: 65900, completion: 34358)
+Estimated cost (USD): $0.03050
+-----------------------------------------------------------------------
