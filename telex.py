@@ -3,7 +3,6 @@
 
 # In[1]:
 
-
 # =======================================================================================
 #              SCRAPING ARTICLES
 # =======================================================================================
@@ -218,7 +217,7 @@ def analyze_dataframe(df, rovat_label, rovat_url):
         
         batch_text = ""
         for j, article in enumerate(batch, 1):
-            batch_text += f"{j}. {article['title']}\n   {article['lead']}\n\n"
+            batch_text += f"{j}. {article['date']}\n   {article['title']}\n   {article['lead']}\n\n"
 
         # Entering prompt, which is written in an external file
         prompt = batch_prompt_template + "\n\n" + batch_text
@@ -415,9 +414,8 @@ def gmail_authenticate():
     return service
 
 # ---------- EMAIL SENDING ----------
-
 def create_message_with_image(to, subject, body_text, image_path):
-    #  Main package
+    #  Main package    
     msg = MIMEMultipart('related')
     msg['to'] = to
     msg['subject'] = subject
