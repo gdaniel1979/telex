@@ -1,3 +1,4 @@
+os
 és
 hogy
 van
