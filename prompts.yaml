@@ -1,5 +1,3 @@
-# A | jel YAML-ban azt jelenti, hogy több soros szöveg következik, és a sortöréseket megtartja.
-
 kulfold:
   batch_prompt: |
     Az alábbi híreket ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hét cikkeinek a címét és bevezetőjét olvasd el, és adj összefoglalást a cikkekről.
@@ -20,7 +18,7 @@ kulfold:
     Írd meg az összefoglaló elején, hogy mely időintervallumról szólnak a cikkek, a YYYY-MM-DD formátumú dátumok alapján. 
     A hírek ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hétről szólnak.
     A cél, hogy a felhasználó, akihez nem jutottak el a hírek az elmúlt időszakból, átfogó és részletes képet kapjon a történésekről.
-    Az összefoglalást NE markdown formátumban írd meg. Olyan formátuma legyen, amit e-mailben kényelmes olvasni.
+    A kimenetben NE használj *, **, # jeleket, vagy bármilyen markdown jelölést. Csak tiszta szöveget adj vissza.
     Az összefoglalás elkészítése előtt, közben és utána ne adj tanácsokat abban, hogy milyen módon lehet a kimenetet fejleszteni, kommentárt és kérdéseket se fűzz hozzá.
     Csak a tiszta összefoglalásra van szükségem.
     Ezen kívül számold meg, hogy hány cikk készült az egyes országokról, és ezt a listát tedd csökkenő sorrendbe az alábbi struktúrában:
@@ -50,7 +48,7 @@ belfold:
     Írd meg az összefoglaló elején, hogy mely időintervallumról szólnak a cikkek, a YYYY-MM-DD formátumú dátumok alapján.
     A hírek ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hétről szólnak.
     A cél, hogy a felhasználó, akihez nem jutottak el a hírek az elmúlt időszakból, átfogó és részletes képet kapjon a történésekről.
-    Az összefoglalást NE markdown formátumban írd meg. Olyan formátuma legyen, amit e-mailben kényelmes olvasni.
+    A kimenetben NE használj *, **, # jeleket, vagy bármilyen markdown jelölést. Csak tiszta szöveget adj vissza.
     Az összefoglalás elkészítése előtt, közben és utána ne adj tanácsokat abban, hogy milyen módon lehet a kimenetet fejleszteni, kommentárt és kérdéseket se fűzz hozzá.
     Csak a tiszta összefoglalásra van szükségem.
     Ezen kívül számold meg, hogy hány cikk készült az egyes fő témákról, és ezt a listát tedd csökkenő sorrendbe az alábbi struktúrában:
@@ -75,11 +73,10 @@ gazdasag:
     Írd meg az összefoglaló elején, hogy mely időintervallumról szólnak a cikkek, a YYYY-MM-DD formátumú dátumok alapján.
     A hírek ({{TODAY}}) és innen visszamenőleg ({{WEEKSBACK}}) hétről szólnak.
     A cél, hogy a felhasználó, akihez nem jutottak el a hírek az elmúlt időszakból, átfogó és részletes képet kapjon a történésekről.
-    Az összefoglalást NE markdown formátumban írd meg. Olyan formátuma legyen, amit e-mailben kényelmes olvasni.
+    A kimenetben NE használj *, **, # jeleket, vagy bármilyen markdown jelölést. Csak tiszta szöveget adj vissza.
     Az összefoglalás elkészítése előtt, közben és utána ne adj tanácsokat abban, hogy milyen módon lehet a kimenetet fejleszteni, kommentárt és kérdéseket se fűzz hozzá.
     Csak a tiszta összefoglalásra van szükségem.
     Ezen kívül számold meg, hogy hány cikk készült az egyes fő témákról, és ezt a listát tedd csökkenő sorrendbe az alábbi struktúrában:
     Fő téma: darabszám
     Fő téma: darabszám
     ...
-    
