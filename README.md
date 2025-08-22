@@ -33,34 +33,6 @@ The workflow is automated with a **Bash script** and can be scheduled with `cron
 
 ## ⚙️ Requirements
 
-### Python Dependencies
-Required packages:
-
-```bash
-requests
-re
-pandas
-datetime
-time
-beautifulsoup4
-openai
-yaml
-sys
-matplotlib
-wordcloud
-os
-base64
-email.mime.text
-email.mime.multipart
-email.mime.image
-google.oauth2.credentials
-google-auth
-google-auth-oauthlib
-googleapiclient.discovery
-google.auth.transport.requests
-```
-
-### Other Requirements
 - **OpenAI API Key** stored in: ```/home/gdaniel1979/auth/openai_auth```
 - **Gmail API credentials:**
   - OAuth client secret JSON: ```/home/gdaniel1979/auth/client_secret_XXXX.json```
