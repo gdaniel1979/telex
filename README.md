@@ -75,13 +75,12 @@ Each run logs:
 Example (```telex_automation.log```):
 
 ```yaml
---- RUN SUMMARY ---
-Script start: 07:59:12
-Script end  : 08:01:34
-Duration    : 00:02:22
-Total tokens used: 15432 (prompt: 8230, completion: 7202)
-Estimated cost (USD): $0.01543
--------------------
+RUN SUMMARY
+Script start: 13:09:05
+Script end  : 13:22:20
+Duration    : 00:13:15
+Total tokens used: 102128 (prompt: 66772, completion: 35356)
+Estimated cost (USD): $0.03123
 ```
 
 ---
