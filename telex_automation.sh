@@ -7,7 +7,7 @@
 
 # ---  Base settings ---
 BASE_DIR="/home/gdaniel1979/hobby_projects/Telex"
-MAIN_CODE="telex_token_check.py"
+MAIN_CODE="telex.py"
 TELEX_LOG="telex_automation.log"
 WORDCLOUD_ARCHIVE_DIR="Wordcloud_archive"
 
