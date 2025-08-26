@@ -5,8 +5,11 @@
 # RUNNING TELEX.PY + WRITING LOG + MOVING WORDCLOUD IMAGES
 # --------------------------------------------------------
 
-# ---  Base directory ---
+# ---  Base settings ---
 BASE_DIR="/home/gdaniel1979/hobby_projects/Telex"
+MAIN_CODE="telex_token_check.py"
+TELEX_LOG="telex_automation.log"
+WORDCLOUD_ARCHIVE_DIR="Wordcloud_archive"
 
 # ---  Setting directory ---
 cd "$BASE_DIR" || exit 1
@@ -15,11 +18,11 @@ cd "$BASE_DIR" || exit 1
 export PATH=/usr/bin:/bin:/usr/local/bin
 
 # --- Running Python script and capturing output ---
-LOG_FILE="$BASE_DIR/telex_automation.log"
+LOG_FILE="$BASE_DIR/$TELEX_LOG"
 DATE_STR=$(date '+%Y-%m-%d %H:%M:%S')
 
 # --- Running Python script and saving output into variable ---
-OUTPUT=$(/usr/bin/python3 "$BASE_DIR/telex.py" 2>&1)
+OUTPUT=$(/usr/bin/python3 "$BASE_DIR/$MAIN_CODE" 2>&1)
 
 # --- Prepend new entry to log (newest on top) ---
 TMP_LOG=$(mktemp)
@@ -33,7 +36,7 @@ TMP_LOG=$(mktemp)
 mv "$TMP_LOG" "$LOG_FILE"
 
 # --- Moving wordcloud images into archive ---
-ARCHIVE_DIR="$BASE_DIR/Wordcloud_archive"
+ARCHIVE_DIR="$BASE_DIR/$WORDCLOUD_ARCHIVE_DIR"
 mkdir -p "$ARCHIVE_DIR"
 
 for topic in kulfold belfold gazdasag; do
