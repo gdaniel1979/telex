@@ -2,7 +2,7 @@
 
 # --------------------------------------------------------
 # TELEX AUTOMATION SCRIPT
-# RUNNING TELEX.PY + WRITING LOG + MOVING WORDCLOUD IMAGES
+# RUNS TELEX.PY + WRITING LOG + MOVES WORDCLOUD IMAGES
 # --------------------------------------------------------
 
 # ---  Base settings ---
@@ -24,7 +24,7 @@ DATE_STR=$(date '+%Y-%m-%d %H:%M:%S')
 # --- Running Python script and saving output into variable ---
 OUTPUT=$(/usr/bin/python3 "$BASE_DIR/$MAIN_CODE" 2>&1)
 
-# --- Prepend new entry to log (newest on top) ---
+# --- Prepending new entry to log (newest on top) ---
 TMP_LOG=$(mktemp)
 {
     echo "===== $DATE_STR ====="
