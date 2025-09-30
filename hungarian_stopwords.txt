@@ -173,3 +173,5 @@ MM
 DD
 ezt
 azt
+gazdaság
+gazdasági
