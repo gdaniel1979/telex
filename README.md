@@ -1,11 +1,11 @@
-# 📊 Telex News Scraper & Analyzer
+# Telex News Scraper & Analyzer
 
 This project scrapes articles from the Hungarian news portal **[telex.hu](https://telex.hu/)**, analyzes them using **OpenAI GPT models**, generates **summaries and word clouds**, and finally sends **weekly news reports via Gmail**.  
 The workflow is automated with a **Bash script** and can be scheduled with `cron`.
 
 ---
 
-## 🚀 Features
+## Features
 
 - **Web scraping**: Collects recent articles from Telex in three categories:
   - ```🇭🇺``` Belföld (Domestic)
@@ -20,7 +20,7 @@ The workflow is automated with a **Bash script** and can be scheduled with `cron
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 - ```telex.py``` -> Main Python script (scraping, analysis, wordcloud, email)
 - ```telex_automation.sh``` -> Bash automation script (logging + archiving)
@@ -31,7 +31,7 @@ The workflow is automated with a **Bash script** and can be scheduled with `cron
 
 ---
 
-## ⚙️ Requirements
+## Requirements
 
 - **OpenAI API Key** stored in: ```/home/gdaniel1979/auth/openai_auth```
 - **Gmail API credentials:**
@@ -40,7 +40,7 @@ The workflow is automated with a **Bash script** and can be scheduled with `cron
 
 ---
 
-## 🔑 Authentication Setup
+## Authentication Setup
 ### 1. OpenAI
 Creates a file at: ```/home/gdaniel1979/auth/openai_auth```
 with content: ```openai_api_key: "YOUR_OPENAI_KEY"```
@@ -51,7 +51,7 @@ On the first run, the script will ask for an authentication code. After fisrt ru
 
 ---
 
-## ▶️ Usage
+## Usage
 Automation with script:
 ```
 telex_automation.sh
@@ -66,7 +66,7 @@ This will:
 
 ---
 
-## 🧾 Logging & Cost Tracking
+## Logging & Cost Tracking
 Each run logs:
 - Start/end time
 - Duration
@@ -85,7 +85,7 @@ Estimated cost (USD): $0.03123
 
 ---
 
-## 📌 Customization
+## Customization
 - **Change topics**: Modify ```topics``` in ```telex.py```.
 - **Update prompts**: Edit ```prompts.yaml``` to refine GPT outputs.
 - **Model selection**: Change ```gpt_model``` in ```telex.py```.
@@ -93,7 +93,7 @@ Estimated cost (USD): $0.03123
 
 ---
 
-## 📧 Email Example
+## Email Example
 Subject:
 ```
 Heti hírösszefoglaló GAZDASÁG témakörben, 2025-08-19
@@ -104,13 +104,13 @@ Body:
 
 ---
 
-## 🛠️ Author
+## Author
 **Dániel Galó**
 - Data science hobbyist | Python, SQL, Bash learner
 - LinkedIn: [linkedin.com/in/danielgalo](https://linkedin.com/in/danielgalo)
 
 ---
 
-## 📜 License
+## License
 This project is for personal and educational use only.
 Not affiliated with Telex.hu.
