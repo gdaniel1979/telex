@@ -2,7 +2,7 @@
 
 # --------------------------------------------------------
 # TELEX AUTOMATION SCRIPT
-# RUNS TELEX.PY + WRITING LOG + MOVES WORDCLOUD IMAGES
+# RUNS TELEX.PY + WRITES LOG + MOVES WORDCLOUD IMAGES
 # --------------------------------------------------------
 
 # ---  Base settings ---
