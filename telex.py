@@ -92,7 +92,72 @@ gmail_service = gmail_authenticate()
 if gmail_service is None:
     print("ERROR: Gmail authentication failed. Cannot send emails. Aborting.")
     sys.exit(1)
-print("Gmail authentication OK. Proceeding with article collection.\n")
+print("Gmail authentication OK.")
+
+# ---------- Claude (headless Claude Code CLI, billed to the Claude subscription) ----------
+import json
+import subprocess
+
+CLAUDE_BIN = '/home/gdaniel1979/.local/bin/claude'
+# Optional long-lived token created with `claude setup-token`; if the file is
+# missing, the CLI's own login (~/.claude/.credentials.json) is used.
+CLAUDE_TOKEN_FILE = '/home/gdaniel1979/auth/claude_oauth_token.txt'
+CLAUDE_SYSTEM_PROMPT = "Magyar nyelvű hírösszefoglalókat készítesz. Csak a kért szöveget add vissza."
+
+claude_model = "sonnet"
+
+
+def ask_claude(prompt, retries=3):
+    """Send a single prompt to Claude through `claude -p`.
+    Returns (text, usage dict). Raises RuntimeError if all attempts fail."""
+    env = os.environ.copy()
+    # An API key would take precedence and bill the API instead of the subscription
+    env.pop("ANTHROPIC_API_KEY", None)
+    if os.path.exists(CLAUDE_TOKEN_FILE):
+        with open(CLAUDE_TOKEN_FILE) as f:
+            env["CLAUDE_CODE_OAUTH_TOKEN"] = f.read().strip()
+
+    cmd = [
+        CLAUDE_BIN, "-p",
+        "--model", claude_model,
+        "--output-format", "json",
+        "--system-prompt", CLAUDE_SYSTEM_PROMPT,
+        "--tools", "",
+        "--strict-mcp-config",
+        "--disable-slash-commands",
+        "--no-session-persistence",
+        "--setting-sources", "",
+    ]
+
+    error = "unknown error"
+    for attempt in range(1, retries + 1):
+        try:
+            proc = subprocess.run(cmd, input=prompt, capture_output=True,
+                                  encoding="utf-8", env=env, timeout=600)
+            try:
+                data = json.loads(proc.stdout)
+            except ValueError:
+                data = None
+            if data and not data.get("is_error") and data.get("result"):
+                return data["result"].strip(), data.get("usage") or {}
+            error = (data or {}).get("result") or proc.stderr.strip() or proc.stdout.strip() or error
+        except (OSError, subprocess.TimeoutExpired) as e:
+            error = str(e)
+        if attempt < retries:
+            time.sleep(30 * attempt)
+
+    raise RuntimeError(f"Claude call failed after {retries} attempts: {error}")
+
+
+print("CHECKING CLAUDE")
+try:
+    ask_claude("Válaszolj egyetlen szóval: ok", retries=2)
+except RuntimeError as e:
+    print(f"ERROR: {e}\n"
+          "If this is an authentication error, log in again with `claude auth login` "
+          f"or save a `claude setup-token` token to {CLAUDE_TOKEN_FILE}. Aborting.")
+    sys.exit(1)
+print("Claude OK. Proceeding with article collection.\n")
 
 
 # =======================================================================================
@@ -113,12 +178,8 @@ weeks_back = 1
 today = date.today()
 cutoff_date = today - timedelta(weeks=weeks_back)
 
-gpt_model = "gpt-4o-mini"
-gpt_temperature = 0.7
-
-print("GPT SETTINGS")
-print(f"Model: {gpt_model}")
-print(f"Temperature: {gpt_temperature}")
+print("CLAUDE SETTINGS")
+print(f"Model: {claude_model}")
 print()
 print("COLLECTING ARTICLES")
 
@@ -216,20 +277,15 @@ if all(df.empty for df in scrapelt_cikkek.values()):
 
 
 # =======================================================================================
-#               OPENAI
+#               CLAUDE
 # =======================================================================================
 
-from openai import OpenAI
 import yaml
 
-credentials = yaml.load(open('/home/gdaniel1979/auth/openai_auth'), Loader=yaml.FullLoader)
-api_key = credentials["openai_api_key"]
-client = OpenAI(api_key=api_key)
-
-batch_size = 5
+batch_size = 25
 today_str = date.today().strftime("%Y-%m-%d")
 
-print("\nSENDING TO OPENAI")
+print("\nSENDING TO CLAUDE")
 
 with open("/home/gdaniel1979/my_projects/telex/prompts.yaml", "r", encoding="utf-8") as f:
     prompts = yaml.safe_load(f)
@@ -238,8 +294,15 @@ total_prompt_tokens = 0
 total_completion_tokens = 0
 
 
-def analyze_dataframe(df, rovat_label, rovat_url):
+def count_usage(usage):
     global total_prompt_tokens, total_completion_tokens
+    total_prompt_tokens += (usage.get("input_tokens", 0)
+                            + usage.get("cache_creation_input_tokens", 0)
+                            + usage.get("cache_read_input_tokens", 0))
+    total_completion_tokens += usage.get("output_tokens", 0)
+
+
+def analyze_dataframe(df, rovat_label, rovat_url):
 
     articles = df.to_dict(orient="records")
 
@@ -271,31 +334,15 @@ def analyze_dataframe(df, rovat_label, rovat_url):
 
         prompt = batch_prompt_template + "\n\n" + batch_text
 
-        response = client.chat.completions.create(
-            model=gpt_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=gpt_temperature
-        )
+        summary, usage = ask_claude(prompt)
+        count_usage(usage)
 
-        usage = response.usage
-        total_prompt_tokens += usage.prompt_tokens
-        total_completion_tokens += usage.completion_tokens
-
-        summaries.append(response.choices[0].message.content.strip())
+        summaries.append(summary)
 
     final_prompt = final_prompt_template + "\n\n".join(summaries)
 
-    final_response = client.chat.completions.create(
-        model=gpt_model,
-        messages=[{"role": "user", "content": final_prompt}],
-        temperature=gpt_temperature
-    )
-
-    usage = final_response.usage
-    total_prompt_tokens += usage.prompt_tokens
-    total_completion_tokens += usage.completion_tokens
-
-    final_summary = final_response.choices[0].message.content.strip()
+    final_summary, usage = ask_claude(final_prompt)
+    count_usage(usage)
 
     return summaries, final_summary
 
@@ -474,18 +521,7 @@ if __name__ == "__main__":
 #               LOG SUMMARY
 # =======================================================================================
 
-MODEL_PRICES = {
-    "gpt-4o-mini": {"prompt": 0.00000015, "completion": 0.00000060},
-    "gpt-4o": {"prompt": 0.000005, "completion": 0.000015},
-    "gpt-4.1": {"prompt": 0.000005, "completion": 0.000015},
-    "gpt-3.5-turbo": {"prompt": 0.0000015, "completion": 0.000002}
-}
-
 total_tokens = total_prompt_tokens + total_completion_tokens
-total_cost_usd = (
-    total_prompt_tokens * MODEL_PRICES[gpt_model]["prompt"] +
-    total_completion_tokens * MODEL_PRICES[gpt_model]["completion"]
-)
 
 script_end = time.time()
 duration = int(script_end - script_start)
@@ -499,7 +535,6 @@ Script start: {time.strftime('%H:%M:%S', time.localtime(script_start))}
 Script end  : {time.strftime('%H:%M:%S', time.localtime(script_end))}
 Duration    : {duration_str}
 Total tokens used: {total_tokens} (prompt: {total_prompt_tokens}, completion: {total_completion_tokens})
-Estimated cost (USD): ${total_cost_usd:.5f}
 -----------------------------------------------------------------------
 """
 

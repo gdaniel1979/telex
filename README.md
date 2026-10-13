@@ -1,6 +1,6 @@
 # Telex News Scraper & Analyzer
 
-This project scrapes articles from the Hungarian news portal **[telex.hu](https://telex.hu/)**, analyzes them using **OpenAI GPT models**, generates **summaries and word clouds**, and finally sends **weekly news reports via Gmail**.  
+This project scrapes articles from the Hungarian news portal **[telex.hu](https://telex.hu/)**, analyzes them with **Claude** (through the Claude Code CLI, using a Claude subscription), generates **summaries and word clouds**, and finally sends **weekly news reports via Gmail**.  
 The workflow is automated with a **Bash script** and can be scheduled with `cron`.
 
 ---
@@ -11,11 +11,12 @@ The workflow is automated with a **Bash script** and can be scheduled with `cron
   - ```🇭🇺``` Belföld (Domestic)
   - 🌍 Külföld (Foreign)
   - 💰 Gazdaság (Economy)
-- **AI-based text analysis**: Uses OpenAI GPT models (`gpt-4o-mini` by default) to summarize batches of articles and produce final summaries.
+- **AI-based text analysis**: Sends batches of articles to Claude (`sonnet` by default) via `claude -p` and produces a final summary per topic. Usage is billed to the Claude subscription, not to API credits.
 - **Batch Processing:** Handles article batches to respect token limits.  
 - **WordCloud visualization**: Generates word cloud images from summaries for each topic.
-- **Automated email reports**: Sends formatted summaries with embedded word clouds via Gmail API.
-- **Cost tracking**: Logs OpenAI token usage and estimated USD cost per run.
+- **Automated email reports**: Sends one combined email with the summaries and embedded word clouds via Gmail API.
+- **Pre-flight checks**: Verifies Gmail and Claude authentication before scraping, and aborts early with a clear message if either fails.
+- **Usage tracking**: Logs Claude token usage per run.
 - **Automation**: `telex_automation.sh` handles scheduling, logging, and archiving of word clouds.
 
 ---
@@ -24,16 +25,16 @@ The workflow is automated with a **Bash script** and can be scheduled with `cron
 
 - ```telex.py``` -> Main Python script (scraping, analysis, wordcloud, email)
 - ```telex_automation.sh``` -> Bash automation script (logging + archiving)
-- ```prompts.yaml``` -> External YAML file with GPT prompt templates
+- ```prompts.yaml``` -> External YAML file with prompt templates
 - ```hungarian_stopwords.txt``` -> Custom Hungarian stopword list (used in WordCloud)
 - ```Wordcloud_archive/``` -> Archived WordCloud PNG files
-- ```telex_automation.log``` -> Runs logs (with tokens, costs, and timestamps)
+- ```telex_automation.log``` -> Run logs (with tokens and timestamps)
 
 ---
 
 ## Requirements
 
-- **OpenAI API Key** stored in: ```/home/gdaniel1979/auth/openai_auth```
+- **Claude Code CLI** installed at ```/home/gdaniel1979/.local/bin/claude``` and a Claude subscription (Pro or higher)
 - **Gmail API credentials:**
   - OAuth client secret JSON: ```/home/gdaniel1979/auth/client_secret_XXXX.json```
   - Token file (auto-generated after first login): ```/home/gdaniel1979/auth/gmail_api_token.json```
@@ -41,9 +42,13 @@ The workflow is automated with a **Bash script** and can be scheduled with `cron
 ---
 
 ## Authentication Setup
-### 1. OpenAI
-Creates a file at: ```/home/gdaniel1979/auth/openai_auth```
-with content: ```openai_api_key: "YOUR_OPENAI_KEY"```
+### 1. Claude
+Create a long-lived token for unattended (cron) runs:
+```
+claude setup-token
+```
+Save the token into ```/home/gdaniel1979/auth/claude_oauth_token.txt``` (```chmod 600```).
+If this file is missing, the script falls back to the CLI's own login (```claude auth login```).
 
 ### 2. Gmail API
 OAuth client secret JSON in ```/home/gdaniel1979/auth/```. 
@@ -66,12 +71,11 @@ This will:
 
 ---
 
-## Logging & Cost Tracking
+## Logging & Usage Tracking
 Each run logs:
 - Start/end time
 - Duration
 - Token usage (prompt & completion)
-- Estimated OpenAI cost in USD
 Example (```telex_automation.log```):
 
 ```yaml
@@ -80,15 +84,15 @@ Script start: 13:09:05
 Script end  : 13:22:20
 Duration    : 00:13:15
 Total tokens used: 102128 (prompt: 66772, completion: 35356)
-Estimated cost (USD): $0.03123
 ```
 
 ---
 
 ## Customization
 - **Change topics**: Modify ```topics``` in ```telex.py```.
-- **Update prompts**: Edit ```prompts.yaml``` to refine GPT outputs.
-- **Model selection**: Change ```gpt_model``` in ```telex.py```.
+- **Update prompts**: Edit ```prompts.yaml``` to refine the summaries.
+- **Model selection**: Change ```claude_model``` in ```telex.py``` (e.g. ```sonnet```, ```haiku```, ```opus```).
+- **Batch size**: Change ```batch_size``` in ```telex.py``` (default 25 articles per request).
 - **Stopwords**: Extend ```hungarian_stopwords.txt``` for better WordCloud filtering.
 
 ---
@@ -96,10 +100,10 @@ Estimated cost (USD): $0.03123
 ## Email Example
 Subject:
 ```
-Heti hírösszefoglaló GAZDASÁG témakörben, 2025-08-19
+Heti hírösszefoglaló, 2026-10-13
 ```
-Body:
-- Final summary (analyzed by GPT)
+Body (for Külföld, Belföld and Gazdaság):
+- Final summary (written by Claude)
 - Embedded WordCloud image
 
 ---
