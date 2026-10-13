@@ -17,17 +17,16 @@ The workflow is automated with a **Bash script** and can be scheduled with `cron
 - **Automated email reports**: Sends one combined email with the summaries and embedded word clouds via Gmail API.
 - **Pre-flight checks**: Verifies Gmail and Claude authentication before scraping, and aborts early with a clear message if either fails.
 - **Usage tracking**: Logs Claude token usage per run.
-- **Automation**: `telex_automation.sh` handles scheduling, logging, and archiving of word clouds.
+- **Automation**: `telex_automation.sh` runs the script from cron and writes the log.
 
 ---
 
 ## Project Structure
 
 - ```telex.py``` -> Main Python script (scraping, analysis, wordcloud, email)
-- ```telex_automation.sh``` -> Bash automation script (logging + archiving)
+- ```telex_automation.sh``` -> Bash automation script (logging)
 - ```prompts.yaml``` -> External YAML file with prompt templates
 - ```hungarian_stopwords.txt``` -> Custom Hungarian stopword list (used in WordCloud)
-- ```Wordcloud_archive/``` -> Archived WordCloud PNG files
 - ```telex_automation.log``` -> Run logs (with tokens and timestamps)
 
 ---
@@ -64,10 +63,9 @@ telex_automation.sh
 This will:
 - run ```telex.py```
 - save logs to ```telex_automation.log``` (newest entry on top)
-- move generated WordClouds to ```Wordcloud_archive/```
 
 **Cron job** runs every Sunday at 23:00 PM:
-```0 23 * * 0 /home/gdaniel1979/hobby_projects/Telex/telex_automation.sh```
+```0 23 * * 0 /home/gdaniel1979/my_projects/telex/telex_automation.sh```
 
 ---
 
