@@ -20,22 +20,24 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from google.auth.exceptions import RefreshError
 
+BASE_DIR = '/home/gdaniel1979/my_projects/telex'
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 CREDENTIALS_FILE = '/home/gdaniel1979/auth/client_secret_1073369059368-0kshmclsgvomtsdqoij42tdhe50ct4c4.apps.googleusercontent.com.json'
 TOKEN_FILE = '/home/gdaniel1979/auth/gmail_api_token.json'
-TOPICS = ["kulfold", "belfold", "gazdasag"]
+EMAIL_TO = "gdaniel1979@yahoo.com"
 
-TOPIC_TITLES = {
-    "kulfold": "KÜLFÖLD",
-    "belfold": "BELFÖLD",
-    "gazdasag": "GAZDASÁG"
+# telex.hu topic slug -> title used in the log and in the email (in display order)
+TOPICS = {
+    "kulfold": "Külföld",
+    "belfold": "Belföld",
+    "gazdasag": "Gazdaság"
 }
 
 
 def gmail_authenticate():
-    """Authenticate with Gmail. On refresh failure, deletes the bad token and
-    falls back to a fresh interactive OAuth flow. Returns a service object or
-    None if authentication cannot be completed."""
+    """Authenticate with Gmail. If the refresh token is revoked, deletes it and
+    falls back to a fresh interactive OAuth flow (only when run from a terminal).
+    Returns a service object or None if authentication cannot be completed."""
     creds = None
 
     if os.path.exists(TOKEN_FILE):
@@ -45,15 +47,23 @@ def gmail_authenticate():
                 creds.refresh(Request())
                 with open(TOKEN_FILE, "w") as f:
                     f.write(creds.to_json())
-            except (RefreshError, Exception) as e:
+            except RefreshError as e:
                 # Token is revoked or invalid — delete it and re-authenticate
                 print(f"Token refresh failed ({e}). Deleting cached token and re-authenticating.")
                 os.remove(TOKEN_FILE)
                 creds = None
+            except Exception as e:
+                # Network or other transient error — keep the token for the next run
+                print(f"Token refresh failed ({e}).")
+                return None
 
     if not creds or not creds.valid:
         if not os.path.exists(CREDENTIALS_FILE):
             print(f"ERROR: OAuth credentials file not found: {CREDENTIALS_FILE}")
+            return None
+        if not sys.stdin.isatty():
+            print("Gmail needs a new authorization, which cannot be done from cron. "
+                  f"Run `python3 {BASE_DIR}/telex.py` once from a terminal.")
             return None
         try:
             flow = InstalledAppFlow.from_client_secrets_file(
@@ -87,6 +97,8 @@ def gmail_authenticate():
 
 
 # ---------- Pre-flight: verify email sending before doing any work ----------
+script_start = time.time()
+
 print("\nCHECKING EMAIL SERVICE")
 gmail_service = gmail_authenticate()
 if gmail_service is None:
@@ -105,35 +117,37 @@ CLAUDE_TOKEN_FILE = '/home/gdaniel1979/auth/claude_oauth_token.txt'
 CLAUDE_SYSTEM_PROMPT = "Magyar nyelvű hírösszefoglalókat készítesz. Csak a kért szöveget add vissza."
 
 claude_model = "sonnet"
+# Number of Claude requests running at the same time
+claude_workers = 2
+
+CLAUDE_ENV = os.environ.copy()
+# An API key would take precedence and bill the API instead of the subscription
+CLAUDE_ENV.pop("ANTHROPIC_API_KEY", None)
+if os.path.exists(CLAUDE_TOKEN_FILE):
+    with open(CLAUDE_TOKEN_FILE) as f:
+        CLAUDE_ENV["CLAUDE_CODE_OAUTH_TOKEN"] = f.read().strip()
+
+CLAUDE_CMD = [
+    CLAUDE_BIN, "-p",
+    "--model", claude_model,
+    "--output-format", "json",
+    "--system-prompt", CLAUDE_SYSTEM_PROMPT,
+    "--tools", "",
+    "--strict-mcp-config",
+    "--disable-slash-commands",
+    "--no-session-persistence",
+    "--setting-sources", "",
+]
 
 
 def ask_claude(prompt, retries=3):
     """Send a single prompt to Claude through `claude -p`.
     Returns (text, usage dict). Raises RuntimeError if all attempts fail."""
-    env = os.environ.copy()
-    # An API key would take precedence and bill the API instead of the subscription
-    env.pop("ANTHROPIC_API_KEY", None)
-    if os.path.exists(CLAUDE_TOKEN_FILE):
-        with open(CLAUDE_TOKEN_FILE) as f:
-            env["CLAUDE_CODE_OAUTH_TOKEN"] = f.read().strip()
-
-    cmd = [
-        CLAUDE_BIN, "-p",
-        "--model", claude_model,
-        "--output-format", "json",
-        "--system-prompt", CLAUDE_SYSTEM_PROMPT,
-        "--tools", "",
-        "--strict-mcp-config",
-        "--disable-slash-commands",
-        "--no-session-persistence",
-        "--setting-sources", "",
-    ]
-
     error = "unknown error"
     for attempt in range(1, retries + 1):
         try:
-            proc = subprocess.run(cmd, input=prompt, capture_output=True,
-                                  encoding="utf-8", env=env, timeout=600)
+            proc = subprocess.run(CLAUDE_CMD, input=prompt, capture_output=True,
+                                  encoding="utf-8", env=CLAUDE_ENV, timeout=600)
             try:
                 data = json.loads(proc.stdout)
             except ValueError:
@@ -164,15 +178,9 @@ print("Claude OK. Proceeding with article collection.\n")
 #              SCRAPING ARTICLES
 # =======================================================================================
 
-import requests
-import pandas as pd
 import re
+import requests
 from bs4 import BeautifulSoup
-
-pd.set_option('display.max_colwidth', None)
-pd.set_option('display.max_rows', 200)
-
-script_start = time.time()
 
 weeks_back = 1
 today = date.today()
@@ -183,8 +191,11 @@ print(f"Model: {claude_model}")
 print()
 print("COLLECTING ARTICLES")
 
+http = requests.Session()
+DATE_IN_URL = re.compile(r"/(\d{4})/(\d{2})/(\d{2})/")
 
-def scrape_topic(rovat_label, rovat_url, cutoff_date):
+
+def scrape_topic(rovat_url, cutoff_date):
     """Download articles of a given topic until cutoff_date."""
     base_url = f"https://telex.hu/rovat/{rovat_url}?oldal="
     page = 1
@@ -192,8 +203,8 @@ def scrape_topic(rovat_label, rovat_url, cutoff_date):
     seen_hrefs = set()
 
     while True:
-        url = base_url + str(page)
-        response = requests.get(url)
+        response = http.get(base_url + str(page), timeout=30)
+        response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
         regular_items = soup.select("div.list__item.list__item--article")
@@ -216,27 +227,16 @@ def scrape_topic(rovat_label, rovat_url, cutoff_date):
                 lead_tag = item.select_one("div.list__item__lead")
                 url_tag = item.select_one("a.list__item__title")
 
-            title = title_tag.get_text(" ", strip=True) if title_tag else ""
-            lead = lead_tag.get_text(" ", strip=True) if lead_tag else ""
-
-            article_date = "unknown"
-            href = None
-            if url_tag and url_tag.has_attr("href"):
-                href = url_tag["href"]
-                regex_date = re.search(r"/(\d{4})/(\d{2})/(\d{2})/", href)
-                if regex_date:
-                    ev, honap, nap = regex_date.groups()
-                    article_date = f"{ev}-{honap}-{nap}"
-
-            if article_date == "unknown":
+            if not url_tag or not url_tag.has_attr("href"):
+                continue
+            href = url_tag["href"]
+            regex_date = DATE_IN_URL.search(href)
+            if not regex_date:
                 continue
 
-            article_date_obj = datetime.strptime(article_date, "%Y-%m-%d").date()
-            if article_date_obj < cutoff_date:
-                if not is_highlight:
-                    continue
-                else:
-                    continue
+            article_date = date(*map(int, regex_date.groups()))
+            if article_date < cutoff_date:
+                continue
 
             if not is_highlight:
                 page_has_valid_articles = True
@@ -244,10 +244,12 @@ def scrape_topic(rovat_label, rovat_url, cutoff_date):
             if href in seen_hrefs:
                 continue
 
+            title = title_tag.get_text(" ", strip=True) if title_tag else ""
+            lead = lead_tag.get_text(" ", strip=True) if lead_tag else ""
             if title and lead:
                 seen_hrefs.add(href)
                 articles.append({
-                    "date": article_date,
+                    "date": article_date.isoformat(),
                     "title": title,
                     "lead": lead
                 })
@@ -257,20 +259,15 @@ def scrape_topic(rovat_label, rovat_url, cutoff_date):
 
         page += 1
 
-    print(f"✅ {len(articles)} articles collected in the topic '{rovat_label}'. ({date.today()})")
-    return pd.DataFrame(articles)
+    return articles
 
 
-topics = {
-    "külföld": "kulfold",
-    "belföld": "belfold",
-    "gazdaság": "gazdasag"
-}
 scrapelt_cikkek = {}
-for label, url in topics.items():
-    scrapelt_cikkek[label] = scrape_topic(label, url, cutoff_date)
+for rovat_url, title in TOPICS.items():
+    scrapelt_cikkek[rovat_url] = scrape_topic(rovat_url, cutoff_date)
+    print(f"✅ {len(scrapelt_cikkek[rovat_url])} articles collected in the topic '{title.lower()}'. ({today})")
 
-if all(df.empty for df in scrapelt_cikkek.values()):
+if not any(scrapelt_cikkek.values()):
     print("\nERROR: No articles collected for any topic. "
           "The telex.hu page structure may have changed again. Aborting.")
     sys.exit(1)
@@ -281,13 +278,14 @@ if all(df.empty for df in scrapelt_cikkek.values()):
 # =======================================================================================
 
 import yaml
+from concurrent.futures import ThreadPoolExecutor
 
 batch_size = 25
-today_str = date.today().strftime("%Y-%m-%d")
+today_str = today.isoformat()
 
 print("\nSENDING TO CLAUDE")
 
-with open("/home/gdaniel1979/my_projects/telex/prompts.yaml", "r", encoding="utf-8") as f:
+with open(os.path.join(BASE_DIR, "prompts.yaml"), "r", encoding="utf-8") as f:
     prompts = yaml.safe_load(f)
 
 total_prompt_tokens = 0
@@ -302,54 +300,55 @@ def count_usage(usage):
     total_completion_tokens += usage.get("output_tokens", 0)
 
 
-def analyze_dataframe(df, rovat_label, rovat_url):
+def fill_template(template):
+    return (template
+            .replace("({{TODAY}})", today_str)
+            .replace("({{WEEKSBACK}})", str(weeks_back)))
 
-    articles = df.to_dict(orient="records")
 
-    batches = [
-        articles[i:i + batch_size]
-        for i in range(0, len(articles), batch_size)
-    ]
-
-    batch_prompt_template = (
-        prompts[rovat_url]["batch_prompt"]
-        .replace("({{TODAY}})", today_str)
-        .replace("({{WEEKSBACK}})", str(weeks_back))
-    )
-
-    final_prompt_template = (
-        prompts[rovat_url]["final_prompt"]
-        .replace("({{TODAY}})", today_str)
-        .replace("({{WEEKSBACK}})", str(weeks_back))
-    )
-
-    summaries = []
-
-    print(f"📂 {rovat_label.upper()} — {len(batches)} batches")
-
-    for i, batch in enumerate(batches, start=1):
+def build_batch_prompts(articles, rovat_url):
+    """Split the articles into batches and return one prompt per batch."""
+    template = fill_template(prompts[rovat_url]["batch_prompt"])
+    batch_prompts = []
+    for i in range(0, len(articles), batch_size):
         batch_text = ""
-        for j, article in enumerate(batch, 1):
+        for j, article in enumerate(articles[i:i + batch_size], 1):
             batch_text += f"{j}. {article['date']}\n   {article['title']}\n   {article['lead']}\n\n"
+        batch_prompts.append(template + "\n\n" + batch_text)
+    return batch_prompts
 
-        prompt = batch_prompt_template + "\n\n" + batch_text
 
-        summary, usage = ask_claude(prompt)
+# Batches of all topics run in parallel; each topic's final summary starts
+# as soon as its own batches are done.
+summaries = {}
+final_texts = {}
+
+with ThreadPoolExecutor(max_workers=claude_workers) as pool:
+    batch_futures = {}
+    for rovat_url, title in TOPICS.items():
+        batch_prompts = build_batch_prompts(scrapelt_cikkek[rovat_url], rovat_url)
+        print(f"📂 {title.upper()} — {len(batch_prompts)} batches")
+        batch_futures[rovat_url] = [pool.submit(ask_claude, p) for p in batch_prompts]
+
+    final_futures = {}
+    for rovat_url, futures in batch_futures.items():
+        summaries[rovat_url] = []
+        for future in futures:
+            text, usage = future.result()
+            count_usage(usage)
+            summaries[rovat_url].append(text)
+
+        if summaries[rovat_url]:
+            final_prompt = (fill_template(prompts[rovat_url]["final_prompt"])
+                            + "\n\n" + "\n\n".join(summaries[rovat_url]))
+            final_futures[rovat_url] = pool.submit(ask_claude, final_prompt)
+        else:
+            final_texts[rovat_url] = "Ebben a rovatban nem jelent meg új cikk az időszakban."
+
+    for rovat_url, future in final_futures.items():
+        text, usage = future.result()
         count_usage(usage)
-
-        summaries.append(summary)
-
-    final_prompt = final_prompt_template + "\n\n".join(summaries)
-
-    final_summary, usage = ask_claude(final_prompt)
-    count_usage(usage)
-
-    return summaries, final_summary
-
-
-summaries_kulfold, final_kulfold = analyze_dataframe(scrapelt_cikkek["külföld"], "külföld", "kulfold")
-summaries_belfold, final_belfold = analyze_dataframe(scrapelt_cikkek["belföld"], "belföld", "belfold")
-summaries_gazdasag, final_gazdasag = analyze_dataframe(scrapelt_cikkek["gazdaság"], "gazdaság", "gazdasag")
+        final_texts[rovat_url] = text
 
 print()
 
@@ -381,26 +380,14 @@ def load_stopwords_from_file(filepath):
         return {line.strip() for line in f if line.strip()}
 
 
-hungarian_stopwords = load_stopwords_from_file("hungarian_stopwords.txt")
-stopwords = STOPWORDS.union(hungarian_stopwords)
-
-cleaned_summaries = {
-    "gazdasag": clean_summaries(summaries_gazdasag),
-    "kulfold": clean_summaries(summaries_kulfold),
-    "belfold": clean_summaries(summaries_belfold)
-}
-
-titles_with_accents = {
-    "gazdasag": "Gazdaság",
-    "kulfold": "Külföld",
-    "belfold": "Belföld"
-}
+stopwords = STOPWORDS.union(load_stopwords_from_file(os.path.join(BASE_DIR, "hungarian_stopwords.txt")))
 
 wordcloud_images = {}
 
-for topic, text in cleaned_summaries.items():
-    if not text.strip():
-        print(f"⚠️  No content for '{topic}', skipping word cloud.")
+for rovat_url in TOPICS:
+    text = clean_summaries(summaries[rovat_url])
+    if not text:
+        print(f"⚠️  No content for '{rovat_url}', skipping word cloud.")
         continue
 
     wc = WordCloud(
@@ -414,54 +401,48 @@ for topic, text in cleaned_summaries.items():
 
     buf = BytesIO()
     wc.to_image().save(buf, format="PNG")
-    wordcloud_images[topic] = buf.getvalue()
+    wordcloud_images[rovat_url] = buf.getvalue()
 
 
 # =======================================================================================
 #               E-MAIL
 # =======================================================================================
 
-FINAL_TEXTS = {
-    "kulfold": final_kulfold,
-    "belfold": final_belfold,
-    "gazdasag": final_gazdasag
-}
+import html
 
-"""
-If sending from saved files:
-FINAL_TEXTS = {
-    "kulfold": open("Arcive/final_kulfold.txt", "r", encoding="utf-8").read(),
-    "belfold": open("Arcive/final_belfold.txt", "r", encoding="utf-8").read(),
-    "gazdasag": open("Arcive/final_gazdasag.txt", "r", encoding="utf-8").read()
-}
-"""
+NUMBERED_LINE = re.compile(r"^\d+\.\s+")
+
+
+def inline_markup(line):
+    """Escape HTML and turn **bold** into <b>bold</b>."""
+    return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", html.escape(line))
 
 
 def text_to_html_lines(text):
-    html = ""
+    out = ""
     for line in text.split("\n"):
         line = line.strip()
         if not line:
-            html += "<br>"
+            out += "<br>"
         elif line.startswith("### "):
-            html += f"<h2>{line[4:].strip()}</h2>"
+            out += f"<h2>{inline_markup(line[4:].strip())}</h2>"
         elif line.startswith("## "):
-            html += f"<h3>{line[3:].strip()}</h3>"
+            out += f"<h3>{inline_markup(line[3:].strip())}</h3>"
         elif line.startswith("# "):
-            html += f"<h1>{line[2:].strip()}</h1>"
-        elif line[0:2].isdigit() and line[2] == '.':
-            html += f"<li>{line[3:].strip()}</li>"
+            out += f"<h1>{inline_markup(line[2:].strip())}</h1>"
+        elif NUMBERED_LINE.match(line):
+            out += f"<li>{inline_markup(NUMBERED_LINE.sub('', line))}</li>"
         elif line.startswith("- "):
-            html += f"<li>{line[2:].strip()}</li>"
+            out += f"<li>{inline_markup(line[2:].strip())}</li>"
         else:
-            html += f"<p>{line}</p>"
-    return html
+            out += f"<p>{inline_markup(line)}</p>"
+    return out
 
 
 def create_combined_email(to, subject, sections):
     """Create a single email with alternating text/wordcloud sections.
 
-    sections: list of (title, body_text, image_bytes) tuples in display order.
+    sections: list of (title, body_text, image_bytes or None) tuples in display order.
     """
     msg = MIMEMultipart('related')
     msg['to'] = to
@@ -474,11 +455,12 @@ def create_combined_email(to, subject, sections):
     html_body = "<html><body>"
 
     for idx, (title, body_text, image_bytes) in enumerate(sections):
-        cid = f"image_{idx}"
         plain_parts.append(f"=== {title} ===\n\n{body_text}\n\n")
         html_body += f"<h1>{title}</h1>"
         html_body += text_to_html_lines(body_text)
-        html_body += f"<br><img src='cid:{cid}'><br><hr>"
+        if image_bytes:
+            html_body += f"<br><img src='cid:image_{idx}'><br>"
+        html_body += "<hr>"
 
     html_body += "</body></html>"
 
@@ -486,9 +468,10 @@ def create_combined_email(to, subject, sections):
     msg_alt.attach(MIMEText(html_body, 'html'))
 
     for idx, (title, body_text, image_bytes) in enumerate(sections):
-        cid = f"image_{idx}"
+        if not image_bytes:
+            continue
         image = MIMEImage(image_bytes)
-        image.add_header('Content-ID', f'<{cid}>')
+        image.add_header('Content-ID', f'<image_{idx}>')
         image.add_header('Content-Disposition', 'inline', filename=f"wordcloud_{idx}.png")
         msg.attach(image)
 
@@ -497,24 +480,16 @@ def create_combined_email(to, subject, sections):
 
 
 def send_email(service, message):
-    sent = service.users().messages().send(userId="me", body=message).execute()
-    return sent
+    return service.users().messages().send(userId="me", body=message).execute()
 
 
-def main():
-    subject = f"Heti hírösszefoglaló, {date.today()}"
-    sections = [
-        ("Külföld",  FINAL_TEXTS["kulfold"],  wordcloud_images["kulfold"]),
-        ("Belföld",  FINAL_TEXTS["belfold"],  wordcloud_images["belfold"]),
-        ("Gazdaság", FINAL_TEXTS["gazdasag"], wordcloud_images["gazdasag"]),
-    ]
-    message = create_combined_email("gdaniel1979@yahoo.com", subject, sections)
-    send_email(gmail_service, message)
-    print(f"E-mail sent (combined), {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
-
-if __name__ == "__main__":
-    main()
+subject = f"Heti hírösszefoglaló, {today}"
+sections = [
+    (title, final_texts[rovat_url], wordcloud_images.get(rovat_url))
+    for rovat_url, title in TOPICS.items()
+]
+send_email(gmail_service, create_combined_email(EMAIL_TO, subject, sections))
+print(f"E-mail sent (combined), {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
 # =======================================================================================
